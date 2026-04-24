@@ -1,0 +1,65 @@
+Running frontend commit fbc2e67b2b63357b96d1da7a9bd2c22a359d000d
+vendor-core-7f00fbff3234d737.min.js.br:54 Statsig is not ready to log exposures, will retry in 1 seconds
+(anonymous) @ vendor-core-7f00fbff3234d737.min.js.br:54Understand this warning
+/make/6unYzRC7sQSybyBJqKJoO1/Untitled?p=f&t=zczxMNeG4CfPynx4-0&fuid=1623577276532581735:1 Access to fetch at 'https://errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+(index):1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+vendor-core-7f00fbff3234d737.min.js.br:54 Autosave Changes not available or already claimed by another tab undefined
+/make/6unYzRC7sQSybyBJqKJoO1/Untitled?t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+vendor-core-7f00fbff3234d737.min.js.br:54 [import] git: 1ad0f375bac0acd8c024cf3fc5fc5824b781bc2f, stamp: E1ED59C23FE82BF8
+9732-6c9e32340aa56abc.min.js.br:183 [Intervention] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://static.figma.com/webfont/1/SourceCodePro-Medium.woff2
+3849-65f9d27076350375.min.js.br:7 The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127
+initialize @ 3849-65f9d27076350375.min.js.br:7Understand this warning
+vendor-core-7f00fbff3234d737.min.js.br:54 [Fullscreen] Booting... (emscripten version 4.0.21)
+vendor-core-7f00fbff3234d737.min.js.br:54 [GPU] graphicsAPI:"WebGPU", vendor:"Google Inc. (Intel)" renderer:"ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x0000A7A1) Direct3D11 vs_5_0 ps_5_0, D3D11)" deviceArchitecture:"gen-12lp" deviceDescription:"" webGPUDevice:"" webGPUVendor:"intel" bindings:"emdawnwebgpu"
+vendor-core-7f00fbff3234d737.min.js.br:54 [Fullscreen] Ready in 472.6ms
+vendor-core-7f00fbff3234d737.min.js.br:54 [FullscreenApp] calling setEditorTheme and setting preference light
+vendor-core-7f00fbff3234d737.min.js.br:54 [MultiplayerSession] connecting to wss://www.figma.com/api/multiplayer/6unYzRC7sQSybyBJqKJoO1?role=editor&tracking_session_id=uE06lSPAAwZgIPbF&version=151&recentReload=0&file-load-streaming-compression&user-id=1623577276532581735&client_release=fbc2e67b2b63357b96d1da7a9bd2c22a359d000d
+vendor-core-7f00fbff3234d737.min.js.br:54 [MultiplayerSession] Joining file version 106 (initial load)
+vendor-core-7f00fbff3234d737.min.js.br:54 [FullscreenApp] calling setEditorTheme and setting preference light
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://statsigapi.net/v1/sdk_exception' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+statsigapi.net/v1/sdk_exception:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to image at 'https://www.gravatar.com/avatar/a32bd6cf64e73758891fb819e633a97e?size=240&default=https%3A%2F%2Fs3-alpha.figma.com%2Fstatic%2Fuser_r_v2.png?c=1' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+www.gravatar.com/avatar/a32bd6cf64e73758891fb819e633a97e?size=240&default=https%3A%2F%2Fs3-alpha.figma.com%2Fstatic%2Fuser_r_v2.png?c=1:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 [Intervention] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://static.figma.com/webfont/1/Figma-Mono-Bold.woff2
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 [Intervention] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://static.figma.com/webfont/1/Figma-Mono-Regular.woff2
+vendor-core-7f00fbff3234d737.min.js.br:54 [devtools] Initialized LS
+vendor-core-7f00fbff3234d737.min.js.br:54 [Fullscreen] loadtime=12.98s maxmem=8798240
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+6523-0295c448b05f2c7c.min.js.br:39 [Intervention] Slow network is detected. See https://www.chromestatus.com/feature/5636954674692096 for more details. Fallback font will be used while loading: https://static.figma.com/webfont/1/Roboto-Bold.woff2
+/api/make/6unYzRC7sQSybyBJqKJoO1/cached_preview_urls?source_code_hash=ca4d4655b85a6469d9de6b90efca4c040edc0cd3:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+vendor-core-7f00fbff3234d737.min.js.br:54 [devtools] Initialized LS
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+vendor-core-7f00fbff3234d737.min.js.br:54 Loaded 40 scripts (6366022b), 0 from cache (0b)
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://events.statsigapi.net/v1/rgstr' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+events.statsigapi.net/v1/rgstr:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+@react-refresh:1  Failed to load resource: net::ERR_CONNECTION_RESETUnderstand this error
+Untitled?p=f&t=uutucoSDAR3IQI2r-0:1 Access to fetch at 'https://errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0' from origin 'https://www.figma.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.Understand this error
+errors.figma.com/api/sentry/api/56203/envelope/?sentry_key=d1b12a8fbe424e4b956eb33cadd5b30d&sentry_version=7&sentry_client=sentry.javascript.browser%2F8.40.0:1  Failed to load resource: net::ERR_FAILED
