@@ -1,0 +1,91 @@
+name: Start EKS Cluster Session
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  start-cluster:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/gha-deploy-role
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHubActions-${{ github.run_id }}
+
+      - name: Install eksctl
+        run: |
+          curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/eksctl /usr/local/bin
+
+      - name: Check if cluster already exists
+        id: cluster-check
+        run: |
+          STATUS=$(aws eks describe-cluster \
+            --name cal-diary-cluster \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "cluster.status" \
+            --output text 2>/dev/null || echo "NOT_FOUND")
+          echo "cluster_status=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Create EKS cluster
+        if: steps.cluster-check.outputs.cluster_status == 'NOT_FOUND'
+        run: |
+          echo "🚀 Creating EKS Fargate cluster (takes ~15-20 minutes)..."
+          eksctl create cluster -f eksctl/cluster-config.yaml
+          echo "✅ Cluster created!"
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name cal-diary-cluster \
+            --region ${{ secrets.AWS_REGION }}
+
+      - name: Wait for CoreDNS
+        run: |
+          echo "Waiting for CoreDNS to be ready..."
+          kubectl rollout status deployment/coredns -n kube-system --timeout=300s || true
+
+      - name: Deploy app
+        run: |
+          echo "Deploying app and ADOT..."
+          ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
+          IMAGE_TAG="latest"
+
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/serviceaccount.yaml
+          kubectl apply -f k8s/adot-config.yaml
+
+          sed "s/IMAGE_TAG/$IMAGE_TAG/g; s/ACCOUNT_ID/$ACCOUNT_ID/g" k8s/deployment.yaml | kubectl apply -f -
+          kubectl apply -f k8s/service.yaml
+
+      - name: Wait for LoadBalancer
+        run: |
+          echo "Waiting for LoadBalancer DNS (~2 minutes)..."
+          for i in {1..24}; do
+            ALB_DNS=$(kubectl get svc cal-diary -n cal-diary \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
+            if [ -n "$ALB_DNS" ]; then
+              echo "✅ Session ready! App URL: http://$ALB_DNS"
+              exit 0
+            fi
+            echo "Waiting... ($i/24)"
+            sleep 5
+          done
+          echo "⚠️  LoadBalancer DNS not yet available. Check back in a minute."
+
+      - name: Print cost reminder
+        run: |
+          echo "⚠️  COST REMINDER"
+          echo "Your cluster is now running and costs ~\$0.158/hr"
+          echo "Budget: ~\$20/month = ~126 hours/month"
+          echo "Remember to run 'Stop EKS Cluster Session' workflow when done!"

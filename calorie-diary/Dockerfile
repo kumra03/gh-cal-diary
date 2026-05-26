@@ -6,6 +6,12 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
+# Accept build args for Vite env vars (baked into JS bundle at build time)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 # Copy all files first to check project type
 COPY . .
 

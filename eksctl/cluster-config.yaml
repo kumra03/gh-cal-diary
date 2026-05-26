@@ -1,0 +1,36 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: cal-diary-cluster
+  region: ap-southeast-1
+  version: "1.30"
+  tags:
+    project: cal-diary
+    purpose: learning
+
+iam:
+  withOIDC: true
+
+vpc:
+  cidr: "10.0.0.0/16"
+  nat:
+    gateway: Disable
+
+fargateProfiles:
+  - name: cal-diary-profile
+    selectors:
+      - namespace: cal-diary
+        labels:
+          app: cal-diary
+      - namespace: kube-system
+    podExecutionRoleARN: arn:aws:iam::032160549000:role/eks-fargate-pod-execution-role
+
+addons:
+  - name: coredns
+    version: latest
+  - name: vpc-cni
+    version: latest
+  - name: aws-load-balancer-controller
+    version: latest
+    serviceAccountRoleARN: arn:aws:iam::032160549000:role/aws-load-balancer-controller-role
