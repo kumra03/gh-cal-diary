@@ -36,7 +36,7 @@ jobs:
       - name: Apply Kubernetes manifests
         run: |
           ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
-          IMAGE_TAG=${{ github.event.inputs.image_tag || github.sha }}
+          IMAGE_TAG=${{ github.event.inputs.image_tag || 'latest' }}
 
           kubectl apply -f k8s/namespace.yaml
           kubectl apply -f k8s/serviceaccount.yaml
