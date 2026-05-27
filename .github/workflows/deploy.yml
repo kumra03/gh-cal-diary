@@ -1,12 +1,6 @@
 name: Deploy to EKS
 
 on:
-  workflow_run:
-    workflows: ["Build and Push Docker Image to ECR"]
-    types:
-      - completed
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       image_tag:
@@ -21,7 +15,6 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout code
