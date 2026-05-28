@@ -38,23 +38,23 @@ data:
             action: insert
 
     exporters:
-      debug:
-        verbosity: basic
+      logging:
+        loglevel: debug
 
     service:
       pipelines:
         traces:
           receivers: [otlp]
           processors: [memory_limiter, resource, batch]
-          exporters: [debug]
+          exporters: [logging]
         metrics:
           receivers: [otlp, prometheus]
           processors: [memory_limiter, resource, batch]
-          exporters: [debug]
+          exporters: [logging]
         logs:
           receivers: [otlp]
           processors: [memory_limiter, resource, batch]
-          exporters: [debug]
+          exporters: [logging]
       telemetry:
         logs:
           level: warn

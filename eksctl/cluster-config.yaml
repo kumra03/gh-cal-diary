@@ -15,7 +15,7 @@ iam:
 vpc:
   cidr: "10.0.0.0/16"
   nat:
-    gateway: Disable
+    gateway: Single
 
 fargateProfiles:
   - name: cal-diary-profile
@@ -24,13 +24,11 @@ fargateProfiles:
         labels:
           app: cal-diary
       - namespace: kube-system
-    podExecutionRoleARN: arn:aws:iam::032160549000:role/eks-fargate-pod-execution-role
 
 addons:
   - name: coredns
     version: latest
   - name: vpc-cni
     version: latest
-  - name: aws-load-balancer-controller
+  - name: kube-proxy
     version: latest
-    serviceAccountRoleARN: arn:aws:iam::032160549000:role/aws-load-balancer-controller-role
