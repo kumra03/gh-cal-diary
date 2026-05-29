@@ -97,12 +97,13 @@ jobs:
       # Step 5: Delete the cluster. eksctl handles Fargate profiles,
       # CloudFormation stacks, VPC, and NAT gateway.
       - name: Delete EKS cluster
+        continue-on-error: true
         run: |
           echo "🗑️  Deleting EKS cluster (takes ~10 minutes)..."
           eksctl delete cluster \
             --name cal-diary-cluster \
             --region ${{ secrets.AWS_REGION }} \
-            --wait 2>&1 || true
+            --wait
           echo "✅ Cluster deletion initiated!"
 
       # Step 6: Verify cluster deletion status
