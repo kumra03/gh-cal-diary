@@ -27,6 +27,10 @@ jobs:
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
 
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
       - name: Check if cluster already exists
         id: cluster-check
         run: |
@@ -50,10 +54,95 @@ jobs:
             --name cal-diary-cluster \
             --region ${{ secrets.AWS_REGION }}
 
-      - name: Wait for CoreDNS
+      # The OIDC provider ID is unique per cluster creation. The IAM role trust
+      # policy must be updated each time the cluster is (re)created so that IRSA
+      # works for the AWS Load Balancer Controller.
+      - name: Update LBC IAM role trust policy with current OIDC provider
+        run: |
+          ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
+          REGION=${{ secrets.AWS_REGION }}
+
+          OIDC_ID=$(aws eks describe-cluster \
+            --name cal-diary-cluster \
+            --region $REGION \
+            --query 'cluster.identity.oidc.issuer' \
+            --output text | sed 's|https://||' | cut -d'/' -f3)
+
+          echo "OIDC ID: $OIDC_ID"
+
+          cat > /tmp/lbc-trust-policy.json << EOF
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Federated": "arn:aws:iam::${ACCOUNT_ID}:oidc-provider/oidc.eks.${REGION}.amazonaws.com/id/${OIDC_ID}"
+                },
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                  "StringEquals": {
+                    "oidc.eks.${REGION}.amazonaws.com/id/${OIDC_ID}:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller",
+                    "oidc.eks.${REGION}.amazonaws.com/id/${OIDC_ID}:aud": "sts.amazonaws.com"
+                  }
+                }
+              }
+            ]
+          }
+          EOF
+
+          aws iam update-assume-role-policy \
+            --role-name aws-load-balancer-controller-role \
+            --policy-document file:///tmp/lbc-trust-policy.json
+
+          echo "✅ Trust policy updated for OIDC ID: $OIDC_ID"
+
+      - name: Create AWS Load Balancer Controller service account in kube-system
+        run: |
+          ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
+
+          kubectl create serviceaccount aws-load-balancer-controller \
+            -n kube-system --dry-run=client -o yaml | \
+          kubectl annotate -f - \
+            eks.amazonaws.com/role-arn=arn:aws:iam::${ACCOUNT_ID}:role/aws-load-balancer-controller-role \
+            --local -o yaml | \
+          kubectl apply -f -
+
+          echo "✅ Service account created with IRSA annotation"
+
+      - name: Install AWS Load Balancer Controller via Helm
+        run: |
+          REGION=${{ secrets.AWS_REGION }}
+
+          # Get VPC ID dynamically from the cluster's VPC
+          VPC_ID=$(aws eks describe-cluster \
+            --name cal-diary-cluster \
+            --region $REGION \
+            --query 'cluster.resourcesVpcConfig.vpcId' \
+            --output text)
+
+          echo "VPC ID: $VPC_ID"
+
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update
+
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n kube-system \
+            --set clusterName=cal-diary-cluster \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set vpcId=$VPC_ID \
+            --set region=$REGION
+
+          echo "✅ AWS Load Balancer Controller installed"
+
+      - name: Wait for CoreDNS and Load Balancer Controller
         run: |
           echo "Waiting for CoreDNS to be ready..."
           kubectl rollout status deployment/coredns -n kube-system --timeout=300s || true
+
+          echo "Waiting for AWS Load Balancer Controller to be ready..."
+          kubectl rollout status deployment/aws-load-balancer-controller -n kube-system --timeout=300s || true
 
       - name: Deploy app
         run: |
@@ -72,10 +161,10 @@ jobs:
         run: |
           echo "Waiting for LoadBalancer DNS (~2 minutes)..."
           for i in {1..24}; do
-            ALB_DNS=$(kubectl get svc cal-diary -n cal-diary \
+            NLB_DNS=$(kubectl get svc cal-diary -n cal-diary \
               -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "")
-            if [ -n "$ALB_DNS" ]; then
-              echo "✅ Session ready! App URL: http://$ALB_DNS"
+            if [ -n "$NLB_DNS" ]; then
+              echo "✅ Session ready! App URL: http://$NLB_DNS"
               exit 0
             fi
             echo "Waiting... ($i/24)"
