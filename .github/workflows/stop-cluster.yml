@@ -34,6 +34,10 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           role-session-name: GitHubActions-${{ github.run_id }}
 
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
       - name: Update kubeconfig
         continue-on-error: true
         run: |
@@ -41,22 +45,57 @@ jobs:
             --name cal-diary-cluster \
             --region ${{ secrets.AWS_REGION }}
 
-      - name: Delete Kubernetes resources
+      # Step 1: Delete the LoadBalancer service first so the AWS LBC can
+      # cleanly remove the NLB and its target groups before we delete the
+      # controller itself. Order matters — LBC must still be running here.
+      - name: Delete LoadBalancer service (triggers NLB deletion)
         continue-on-error: true
         run: |
-          echo "Deleting Kubernetes resources..."
-          kubectl delete -f k8s/ --ignore-not-found=true || true
+          echo "Deleting LoadBalancer service to trigger NLB cleanup..."
+          kubectl delete svc cal-diary -n cal-diary --ignore-not-found=true
+          echo "Service deleted. Waiting for NLB to be removed from AWS..."
 
-      - name: Wait for ALB deletion
+      # Step 2: Poll until the NLB is actually gone in AWS — don't race ahead.
+      - name: Wait for NLB to be fully deleted
         run: |
-          echo "Waiting 90 seconds for ALB to drain and delete..."
-          sleep 90
+          REGION=${{ secrets.AWS_REGION }}
+          echo "Polling for NLB deletion (up to 5 minutes)..."
+          for i in $(seq 1 30); do
+            COUNT=$(aws elbv2 describe-load-balancers \
+              --region $REGION \
+              --query "length(LoadBalancers[?contains(LoadBalancerName, 'k8s-caldiary')])" \
+              --output text 2>/dev/null || echo "0")
+            if [ "$COUNT" = "0" ]; then
+              echo "✅ NLB deleted."
+              break
+            fi
+            echo "NLB still exists ($i/30), waiting 10 seconds..."
+            sleep 10
+          done
+
+      # Step 3: Uninstall the AWS Load Balancer Controller via Helm so its
+      # CRDs, webhooks, and RBAC are cleanly removed.
+      - name: Uninstall AWS Load Balancer Controller
+        continue-on-error: true
+        run: |
+          echo "Uninstalling AWS Load Balancer Controller..."
+          helm uninstall aws-load-balancer-controller -n kube-system || true
+          echo "✅ LBC uninstalled."
+
+      # Step 4: Delete remaining app resources.
+      - name: Delete remaining Kubernetes resources
+        continue-on-error: true
+        run: |
+          echo "Deleting remaining Kubernetes resources..."
+          kubectl delete -f k8s/ --ignore-not-found=true || true
 
       - name: Install eksctl
         run: |
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
 
+      # Step 5: Delete the cluster. eksctl handles Fargate profiles,
+      # CloudFormation stacks, VPC, and NAT gateway.
       - name: Delete EKS cluster
         run: |
           echo "🗑️  Deleting EKS cluster (takes ~10 minutes)..."
@@ -66,16 +105,24 @@ jobs:
             --wait
           echo "✅ Cluster deleted!"
 
-      - name: Verify cleanup
+      # Step 6: Verify no NLBs or target groups are lingering.
+      - name: Verify no lingering load balancers
         run: |
-          echo "Verifying no lingering resources..."
-          aws ec2 describe-load-balancers \
-            --region ${{ secrets.AWS_REGION }} \
-            --query "LoadBalancers[?contains(LoadBalancerName, 'cal-diary')].[LoadBalancerName,State.Code]" \
+          REGION=${{ secrets.AWS_REGION }}
+          echo "Checking for lingering NLBs..."
+          aws elbv2 describe-load-balancers \
+            --region $REGION \
+            --query "LoadBalancers[?contains(LoadBalancerName, 'caldiary') || contains(LoadBalancerName, 'cal-diary')].[LoadBalancerName,State.Code]" \
+            --output table 2>/dev/null || true
+
+          echo "Checking for lingering target groups..."
+          aws elbv2 describe-target-groups \
+            --region $REGION \
+            --query "TargetGroups[?contains(TargetGroupName, 'caldiary')].[TargetGroupName,TargetType]" \
             --output table 2>/dev/null || true
 
       - name: Cleanup complete
         run: |
           echo "✅ Session stopped. All resources cleaned up."
           echo "No more hourly charges!"
-          echo "ECR images retained. IAM roles retained."
+          echo "Retained (no charges): ECR images, IAM roles, S3 state."
