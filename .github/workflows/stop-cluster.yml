@@ -98,20 +98,16 @@ jobs:
       # CloudFormation stacks, VPC, and NAT gateway.
       - name: Delete EKS cluster
         run: |
-          set +e
           echo "🗑️  Deleting EKS cluster (takes ~10 minutes)..."
           eksctl delete cluster \
             --name cal-diary-cluster \
             --region ${{ secrets.AWS_REGION }} \
-            --wait
-          EXIT_CODE=$?
-          set -e
-          if [ $EXIT_CODE -eq 0 ]; then
-            echo "✅ Cluster deleted!"
-          else
-            echo "⚠️  eksctl delete exited with code $EXIT_CODE (likely due to Kubernetes auth after Fargate deletion)"
-            echo "Cluster deletion proceeds at AWS level — checking status..."
-          fi
+            --wait || {
+            EXIT_CODE=$?
+            echo "⚠️  eksctl exited with code $EXIT_CODE (likely Kubernetes auth failure after Fargate deletion)"
+            echo "Cluster deletion proceeds at AWS level — verifying in next step..."
+          }
+          echo "✅ Cluster deletion initiated!"
 
       # Step 6: Verify cluster deletion status
       - name: Verify cluster deletion
