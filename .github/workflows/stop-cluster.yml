@@ -97,16 +97,41 @@ jobs:
       # Step 5: Delete the cluster. eksctl handles Fargate profiles,
       # CloudFormation stacks, VPC, and NAT gateway.
       - name: Delete EKS cluster
-        continue-on-error: true
         run: |
+          set +e
           echo "🗑️  Deleting EKS cluster (takes ~10 minutes)..."
           eksctl delete cluster \
             --name cal-diary-cluster \
             --region ${{ secrets.AWS_REGION }} \
-            --wait || true
-          echo "✅ Cluster deletion initiated!"
+            --wait
+          EXIT_CODE=$?
+          set -e
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Cluster deleted!"
+          else
+            echo "⚠️  eksctl delete exited with code $EXIT_CODE (likely due to Kubernetes auth after Fargate deletion)"
+            echo "Cluster deletion proceeds at AWS level — checking status..."
+          fi
 
-      # Step 6: Verify no NLBs or target groups are lingering.
+      # Step 6: Verify cluster deletion status
+      - name: Verify cluster deletion
+        run: |
+          echo "Checking cluster deletion status..."
+          CLUSTER_STATUS=$(aws eks describe-cluster \
+            --name cal-diary-cluster \
+            --region ${{ secrets.AWS_REGION }} \
+            --query 'cluster.status' \
+            --output text 2>/dev/null || echo "NOT_FOUND")
+
+          if [ "$CLUSTER_STATUS" = "NOT_FOUND" ]; then
+            echo "✅ Cluster successfully deleted"
+          elif [ "$CLUSTER_STATUS" = "DELETING" ]; then
+            echo "⚠️  Cluster is still DELETING — this is normal and can take several minutes"
+          else
+            echo "⚠️  Cluster status: $CLUSTER_STATUS"
+          fi
+
+      # Step 7: Verify no NLBs or target groups are lingering.
       - name: Verify no lingering load balancers
         run: |
           REGION=${{ secrets.AWS_REGION }}
