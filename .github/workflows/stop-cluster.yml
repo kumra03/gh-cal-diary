@@ -102,11 +102,7 @@ jobs:
           eksctl delete cluster \
             --name cal-diary-cluster \
             --region ${{ secrets.AWS_REGION }} \
-            --wait || {
-            EXIT_CODE=$?
-            echo "⚠️  eksctl exited with code $EXIT_CODE (likely Kubernetes auth failure after Fargate deletion)"
-            echo "Cluster deletion proceeds at AWS level — verifying in next step..."
-          }
+            --wait 2>&1 || true
           echo "✅ Cluster deletion initiated!"
 
       # Step 6: Verify cluster deletion status
