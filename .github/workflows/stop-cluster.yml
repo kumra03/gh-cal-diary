@@ -83,20 +83,28 @@ jobs:
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
 
-      # Step 5: Delete the cluster. eksctl handles Fargate profiles,
-      # CloudFormation stacks, VPC, and NAT gateway.
-      - name: Delete EKS cluster
+      # Step 5: Delete the cluster via CloudFormation directly to avoid eksctl's
+      # Kubernetes cleanup step which fails due to auth issues with Fargate profiles.
+      - name: Delete EKS cluster CloudFormation stack
         if: steps.cluster-check.outputs.cluster_status != 'NOT_FOUND'
         continue-on-error: true
         run: |
-          echo "🗑️  Deleting EKS cluster (takes ~10-20 minutes)..."
-          eksctl delete cluster \
-            --name cal-diary-cluster \
-            --region ${{ secrets.AWS_REGION }} \
-            --force \
-            --timeout 45m \
-            --wait 2>&1 | tee eksctl.log
-          echo "✅ Cluster deletion command completed."
+          REGION=${{ secrets.AWS_REGION }}
+          STACK_NAME=eksctl-cal-diary-cluster-cluster
+          echo "🗑️  Deleting EKS cluster CloudFormation stack..."
+
+          aws cloudformation delete-stack \
+            --stack-name "$STACK_NAME" \
+            --region "$REGION"
+
+          echo "Waiting up to 30 minutes for stack deletion..."
+          if aws cloudformation wait stack-delete-complete \
+            --stack-name "$STACK_NAME" \
+            --region "$REGION"; then
+            echo "✅ Cluster deletion completed."
+          else
+            echo "⚠️ Stack deletion timed out or failed — may be stuck on resources."
+          fi
 
       - name: Diagnose stack deletion failure
         if: always()
