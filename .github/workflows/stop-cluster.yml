@@ -100,6 +100,7 @@ jobs:
 
       - name: Delete orphaned eksctl CloudFormation stack if present
         if: always()
+        continue-on-error: true
         run: |
           REGION=${{ secrets.AWS_REGION }}
           STACK_NAME=eksctl-cal-diary-cluster-cluster
@@ -112,18 +113,24 @@ jobs:
 
           echo "Stack status before cleanup: $STACK_STATUS"
           if [ "$STACK_STATUS" != "NOT_FOUND" ]; then
-            echo "Deleting leftover stack $STACK_NAME ..."
+            echo "Deleting leftover stack $STACK_NAME (status: $STACK_STATUS)..."
+
+            # If stack is in DELETE_FAILED state, need to retry deletion
+            if [ "$STACK_STATUS" = "DELETE_FAILED" ]; then
+              echo "Stack in DELETE_FAILED state — retrying deletion..."
+            fi
+
             aws cloudformation delete-stack \
               --stack-name "$STACK_NAME" \
               --region "$REGION"
 
-            echo "Waiting for stack deletion to complete..."
+            echo "Waiting up to 20 minutes for stack deletion..."
             if aws cloudformation wait stack-delete-complete \
               --stack-name "$STACK_NAME" \
               --region "$REGION"; then
               echo "✅ Stack deleted successfully."
             else
-              echo "⚠️ Stack deletion waiter failed. Will verify in final checks."
+              echo "⚠️ Stack deletion incomplete. Stack may still be deleting or in failed state."
             fi
           else
             echo "No leftover eksctl cluster stack found."
@@ -172,11 +179,16 @@ jobs:
             --query 'Stacks[0].StackStatus' \
             --output text 2>/dev/null || echo "NOT_FOUND")
 
-          if [ "$STACK_STATUS" != "NOT_FOUND" ]; then
-            echo "❌ Cleanup incomplete: eksctl cluster stack still exists with status $STACK_STATUS"
+          if [ "$STACK_STATUS" = "NOT_FOUND" ]; then
+            echo "✅ Session stopped. All resources cleaned up."
+            echo "No more hourly charges!"
+            echo "Retained (no charges): ECR images, IAM roles, S3 state."
+          elif [ "$STACK_STATUS" = "DELETE_FAILED" ]; then
+            echo "⚠️ Stack in DELETE_FAILED state — retrying deletion may be needed"
+            echo "Run the workflow again or manually delete the stack in CloudFormation console"
+            exit 1
+          else
+            echo "⚠️ Stack still exists with status: $STACK_STATUS"
+            echo "This may still be deleting — check CloudFormation console if issue persists"
             exit 1
           fi
-
-          echo "✅ Session stopped. All resources cleaned up."
-          echo "No more hourly charges!"
-          echo "Retained (no charges): ECR images, IAM roles, S3 state."
