@@ -54,6 +54,43 @@ jobs:
             --name cal-diary-cluster \
             --region ${{ secrets.AWS_REGION }}
 
+      - name: Ensure GitHub role access entry exists
+        run: |
+          CLUSTER=cal-diary-cluster
+          REGION=${{ secrets.AWS_REGION }}
+          ROLE_ARN=arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/gha-deploy-role
+          POLICY_ARN=arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy
+
+          echo "Ensuring access entry exists for $ROLE_ARN ..."
+          if aws eks describe-access-entry \
+            --cluster-name "$CLUSTER" \
+            --region "$REGION" \
+            --principal-arn "$ROLE_ARN" >/dev/null 2>&1; then
+            echo "Access entry already exists."
+          else
+            aws eks create-access-entry \
+              --cluster-name "$CLUSTER" \
+              --region "$REGION" \
+              --principal-arn "$ROLE_ARN" \
+              --type STANDARD
+            echo "Access entry created."
+          fi
+
+          echo "Ensuring cluster-admin policy is associated..."
+          aws eks associate-access-policy \
+            --cluster-name "$CLUSTER" \
+            --region "$REGION" \
+            --principal-arn "$ROLE_ARN" \
+            --policy-arn "$POLICY_ARN" \
+            --access-scope type=cluster >/dev/null 2>&1 || true
+
+          aws eks list-associated-access-policies \
+            --cluster-name "$CLUSTER" \
+            --region "$REGION" \
+            --principal-arn "$ROLE_ARN" \
+            --query "associatedAccessPolicies[?policyArn=='$POLICY_ARN'] | length(@)" \
+            --output text
+
       # The OIDC provider ID is unique per cluster creation. The IAM role trust
       # policy must be updated each time the cluster is (re)created so that IRSA
       # works for the AWS Load Balancer Controller.

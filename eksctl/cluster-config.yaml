@@ -40,6 +40,8 @@ addons:
 
 # Grant cluster-admin access to both IAM users so either laptop can run
 # kubectl/Helm without assuming the gha-deploy-role.
+# Also grant cluster-admin to gha-deploy-role so GitHub Actions CI/CD can
+# manage cluster lifecycle (create, deploy, delete) without auth failures.
 accessConfig:
   authenticationMode: API_AND_CONFIG_MAP
   accessEntries:
@@ -50,6 +52,12 @@ accessConfig:
           accessScope:
             type: cluster
     - principalARN: arn:aws:iam::032160549000:user/kumra03-console
+      type: STANDARD
+      accessPolicies:
+        - policyARN: arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy
+          accessScope:
+            type: cluster
+    - principalARN: arn:aws:iam::032160549000:role/gha-deploy-role
       type: STANDARD
       accessPolicies:
         - policyARN: arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy
