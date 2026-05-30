@@ -95,8 +95,31 @@ jobs:
             --region ${{ secrets.AWS_REGION }} \
             --force \
             --timeout 45m \
-            --wait
+            --wait 2>&1 | tee eksctl.log
           echo "✅ Cluster deletion command completed."
+
+      - name: Diagnose stack deletion failure
+        if: always()
+        continue-on-error: true
+        run: |
+          REGION=${{ secrets.AWS_REGION }}
+          STACK_NAME=eksctl-cal-diary-cluster-cluster
+
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --region "$REGION" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "NOT_FOUND")
+
+          echo "Stack status: $STACK_STATUS"
+          if [ "$STACK_STATUS" = "DELETE_FAILED" ]; then
+            echo "Getting stack resources that failed to delete..."
+            aws cloudformation describe-stack-resources \
+              --stack-name "$STACK_NAME" \
+              --region "$REGION" \
+              --query "StackResources[?ResourceStatus=='DELETE_FAILED'].[LogicalResourceId,PhysicalResourceId,ResourceType]" \
+              --output table 2>/dev/null || true
+          fi
 
       - name: Delete orphaned eksctl CloudFormation stack if present
         if: always()
@@ -115,7 +138,7 @@ jobs:
           if [ "$STACK_STATUS" != "NOT_FOUND" ]; then
             echo "Deleting leftover stack $STACK_NAME (status: $STACK_STATUS)..."
 
-            # If stack is in DELETE_FAILED state, need to retry deletion
+            # If stack is in DELETE_FAILED state, retry deletion
             if [ "$STACK_STATUS" = "DELETE_FAILED" ]; then
               echo "Stack in DELETE_FAILED state — retrying deletion..."
             fi
@@ -130,7 +153,7 @@ jobs:
               --region "$REGION"; then
               echo "✅ Stack deleted successfully."
             else
-              echo "⚠️ Stack deletion incomplete. Stack may still be deleting or in failed state."
+              echo "⚠️ Stack deletion incomplete or timed out. May need manual cleanup."
             fi
           else
             echo "No leftover eksctl cluster stack found."
