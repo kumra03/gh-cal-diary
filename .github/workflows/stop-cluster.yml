@@ -45,6 +45,39 @@ jobs:
           echo "cluster_status=$STATUS" >> $GITHUB_OUTPUT
           echo "Current cluster status: $STATUS"
 
+      # Pre-delete the NLB before eksctl runs — if the NLB still exists when
+      # CloudFormation tries to remove the public subnets it will fail with
+      # "subnet has dependencies". Removing the NLB first releases its ENIs.
+      - name: Delete NLB if still present (prevents subnet dependency failure)
+        run: |
+          REGION=${{ secrets.AWS_REGION }}
+          NLB_ARN=$(aws elbv2 describe-load-balancers \
+            --region "$REGION" \
+            --query "LoadBalancers[?contains(LoadBalancerName,'caldiary') || contains(LoadBalancerName,'k8s-cal')].LoadBalancerArn" \
+            --output text 2>/dev/null || true)
+
+          if [ -n "$NLB_ARN" ] && [ "$NLB_ARN" != "None" ]; then
+            echo "Found NLB: $NLB_ARN — deleting..."
+            aws elbv2 delete-load-balancer --load-balancer-arn "$NLB_ARN" --region "$REGION"
+
+            echo "Waiting up to 3 minutes for ENIs to be released..."
+            for i in $(seq 1 18); do
+              ENI_COUNT=$(aws ec2 describe-network-interfaces \
+                --region "$REGION" \
+                --filters "Name=description,Values=ELB net/k8s-caldiary*" \
+                --query 'length(NetworkInterfaces)' \
+                --output text 2>/dev/null || echo "0")
+              if [ "$ENI_COUNT" = "0" ]; then
+                echo "✅ NLB ENIs released."
+                break
+              fi
+              echo "ENIs still present ($i/18), waiting 10s..."
+              sleep 10
+            done
+          else
+            echo "No cal-diary NLB found, skipping."
+          fi
+
       - name: Install eksctl
         run: |
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
