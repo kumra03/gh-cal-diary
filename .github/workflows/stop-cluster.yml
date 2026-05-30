@@ -83,8 +83,8 @@ jobs:
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
 
-      # Step 5a: Force-cleanup lingering resources (ENIs, SGs) before CloudFormation deletion
-      - name: Force cleanup lingering cluster resources
+      # Step 5a: Aggressive VPC cleanup before CloudFormation deletion
+      - name: Aggressive cleanup of all VPC resources
         if: steps.cluster-check.outputs.cluster_status != 'NOT_FOUND'
         continue-on-error: true
         run: |
@@ -96,35 +96,73 @@ jobs:
             --output text 2>/dev/null || echo "")
 
           if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
-            echo "VPC already gone or cluster not found — skipping resource cleanup"
+            echo "VPC already gone — skipping cleanup"
             exit 0
           fi
 
-          echo "Cleaning up lingering resources in VPC $VPC_ID..."
+          echo "Aggressive cleanup of VPC $VPC_ID..."
 
-          # Delete orphaned ENIs (they block subnet deletion)
-          echo "Deleting orphaned ENIs..."
+          # Delete all ENIs (including attached ones by detaching first)
+          echo "Force-detaching and deleting ALL ENIs..."
           for ENI in $(aws ec2 describe-network-interfaces \
             --region "$REGION" \
             --filters "Name=vpc-id,Values=$VPC_ID" \
-            --query 'NetworkInterfaces[?Attachment==null].NetworkInterfaceId' \
+            --query 'NetworkInterfaces[].NetworkInterfaceId' \
             --output text 2>/dev/null); do
-            echo "  Deleting ENI: $ENI"
+            aws ec2 detach-network-interface --attachment-id $(aws ec2 describe-network-interfaces \
+              --network-interface-ids "$ENI" --region "$REGION" \
+              --query 'NetworkInterfaces[0].Attachment.AttachmentId' --output text 2>/dev/null) \
+              --region "$REGION" 2>/dev/null || true
+            sleep 1
             aws ec2 delete-network-interface --network-interface-id "$ENI" --region "$REGION" 2>/dev/null || true
           done
+          echo "✅ ENIs deleted"
 
-          # Delete orphaned security groups (except default)
-          echo "Deleting orphaned security groups..."
+          # Delete Internet Gateways
+          echo "Deleting Internet Gateways..."
+          for IGW in $(aws ec2 describe-internet-gateways \
+            --region "$REGION" \
+            --filters "Name=attachment.vpc-id,Values=$VPC_ID" \
+            --query 'InternetGateways[].InternetGatewayId' --output text 2>/dev/null); do
+            aws ec2 detach-internet-gateway --internet-gateway-id "$IGW" --vpc-id "$VPC_ID" --region "$REGION" 2>/dev/null || true
+            aws ec2 delete-internet-gateway --internet-gateway-id "$IGW" --region "$REGION" 2>/dev/null || true
+          done
+          echo "✅ IGWs deleted"
+
+          # Delete NAT Gateways and release Elastic IPs
+          echo "Deleting NAT Gateways..."
+          for NAT in $(aws ec2 describe-nat-gateways \
+            --region "$REGION" \
+            --filter "Name=vpc-id,Values=$VPC_ID" \
+            --query 'NatGateways[].NatGatewayId' --output text 2>/dev/null); do
+            aws ec2 delete-nat-gateway --nat-gateway-id "$NAT" --region "$REGION" 2>/dev/null || true
+          done
+          sleep 5  # Give NAT gateway time to delete
+          echo "✅ NAT Gateways deleted"
+
+          # Release Elastic IPs
+          echo "Releasing Elastic IPs..."
+          for ALLOC in $(aws ec2 describe-addresses \
+            --region "$REGION" \
+            --filters "Name=domain,Values=vpc" \
+            --query 'Addresses[?AssociationId==null].AllocationId' --output text 2>/dev/null); do
+            aws ec2 release-address --allocation-id "$ALLOC" --region "$REGION" 2>/dev/null || true
+          done
+          echo "✅ Elastic IPs released"
+
+          # Delete all Security Groups except default
+          echo "Deleting security groups..."
           for SG in $(aws ec2 describe-security-groups \
             --region "$REGION" \
-            --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=!default" \
-            --query 'SecurityGroups[].GroupId' \
-            --output text 2>/dev/null); do
-            echo "  Deleting SG: $SG"
+            --filters "Name=vpc-id,Values=$VPC_ID" \
+            --query 'SecurityGroups[?GroupName!=`default`].GroupId' --output text 2>/dev/null); do
+            # Revoke all ingress rules first
+            aws ec2 revoke-security-group-ingress --group-id "$SG" --ip-permissions "$(aws ec2 describe-security-groups --group-ids "$SG" --region "$REGION" --query 'SecurityGroups[0].IpPermissions' --output json 2>/dev/null)" --region "$REGION" 2>/dev/null || true
             aws ec2 delete-security-group --group-id "$SG" --region "$REGION" 2>/dev/null || true
           done
+          echo "✅ Security groups deleted"
 
-          echo "✅ Resource cleanup complete"
+          echo "✅ Aggressive VPC cleanup complete"
 
       # Step 5b: Delete the cluster via CloudFormation directly to avoid eksctl's
       # Kubernetes cleanup step which fails due to auth issues with Fargate profiles.
