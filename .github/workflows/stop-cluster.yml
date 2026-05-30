@@ -83,7 +83,50 @@ jobs:
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
 
-      # Step 5: Delete the cluster via CloudFormation directly to avoid eksctl's
+      # Step 5a: Force-cleanup lingering resources (ENIs, SGs) before CloudFormation deletion
+      - name: Force cleanup lingering cluster resources
+        if: steps.cluster-check.outputs.cluster_status != 'NOT_FOUND'
+        continue-on-error: true
+        run: |
+          REGION=${{ secrets.AWS_REGION }}
+          VPC_ID=$(aws eks describe-cluster \
+            --name cal-diary-cluster \
+            --region "$REGION" \
+            --query 'cluster.resourcesVpcConfig.vpcId' \
+            --output text 2>/dev/null || echo "")
+
+          if [ -z "$VPC_ID" ] || [ "$VPC_ID" = "None" ]; then
+            echo "VPC already gone or cluster not found — skipping resource cleanup"
+            exit 0
+          fi
+
+          echo "Cleaning up lingering resources in VPC $VPC_ID..."
+
+          # Delete orphaned ENIs (they block subnet deletion)
+          echo "Deleting orphaned ENIs..."
+          for ENI in $(aws ec2 describe-network-interfaces \
+            --region "$REGION" \
+            --filters "Name=vpc-id,Values=$VPC_ID" \
+            --query 'NetworkInterfaces[?Attachment==null].NetworkInterfaceId' \
+            --output text 2>/dev/null); do
+            echo "  Deleting ENI: $ENI"
+            aws ec2 delete-network-interface --network-interface-id "$ENI" --region "$REGION" 2>/dev/null || true
+          done
+
+          # Delete orphaned security groups (except default)
+          echo "Deleting orphaned security groups..."
+          for SG in $(aws ec2 describe-security-groups \
+            --region "$REGION" \
+            --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=!default" \
+            --query 'SecurityGroups[].GroupId' \
+            --output text 2>/dev/null); do
+            echo "  Deleting SG: $SG"
+            aws ec2 delete-security-group --group-id "$SG" --region "$REGION" 2>/dev/null || true
+          done
+
+          echo "✅ Resource cleanup complete"
+
+      # Step 5b: Delete the cluster via CloudFormation directly to avoid eksctl's
       # Kubernetes cleanup step which fails due to auth issues with Fargate profiles.
       - name: Delete EKS cluster CloudFormation stack
         if: steps.cluster-check.outputs.cluster_status != 'NOT_FOUND'
